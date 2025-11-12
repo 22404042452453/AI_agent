@@ -7,8 +7,7 @@ from langchain_ollama import OllamaLLM
 
 
 def setup_search_chain(vectorstore):
-    retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 10})
-
+    retriever = vectorstore.as_retriever(search_type="mmr", search_kwargs={"k": 6, "fetch_k": 60, "lambda_mult": 0.8})
     def format_docs(docs):
         formatted_docs = []
         for doc in docs:
@@ -18,7 +17,6 @@ def setup_search_chain(vectorstore):
             filename = metadata.get('filename', 'Unknown')
 
             # Clean up filename to get document designation
-            # Remove .pdf extension and clean up
             doc_name = filename.replace('.pdf', '').replace('_', ' ').strip()
 
             # Add section references to the content
@@ -45,14 +43,15 @@ def setup_search_chain(vectorstore):
 5. НЕ добавляй НИКАКИХ собственных знаний, интерпретаций или внешней информации
 6. НЕ отвечай на вопросы вне темы нормативных документов
 7. ЦИТИРУЙ текст документа дословно, не обобщай
-8. Максимум 500 слов
+8. ОТВЕЧАЙ ТОЛЬКО НА РУССКОМ ЯЗЫКЕ - ЗАПРЕЩЕНЫ ответы на английском или других языках
+9. Максимум 500 слов
 
 КОНТЕКСТ ИЗ ДОКУМЕНТОВ:
 {context}
 
 ВОПРОС: {question}
 
-ОТВЕТ (только по контексту с обязательными ссылками):"""
+ОТВЕТ НА РУССКОМ ЯЗЫКЕ (только по контексту с обязательными ссылками):"""
 
     prompt = PromptTemplate(template=template, input_variables=["context", "question"])
     search_chain = (
@@ -69,9 +68,10 @@ def handle_search_mode(search_chain):
         return False
     try:
         answer = search_chain.invoke(question)
-        print(f"Ответ: {answer}\n")
-        logging.info(f"Search - Query: {question} - Answer length: {len(answer)}")
+        print("Ответ:")
+        print(answer)
+        print()
+        logging.info(f"Search - Question: {question} - Answer length: {len(answer)}")
     except Exception as e:
         print(f"Ошибка: {e}\n")
-        logging.error(f"Search error for query: {question} - {e}")
-    return True
+        logging.error(f"Search error for question: {question} - {e}")

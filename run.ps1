@@ -12,6 +12,22 @@ if ((-not (Test-Path "faiss_index/index.faiss")) -or (-not (Test-Path "faiss_ind
     python main.py --create-indexes
 }
 
+# Start Ollama if not running
+$ollamaProcess = Get-Process ollama -ErrorAction SilentlyContinue
+if (-not $ollamaProcess) {
+    Write-Host "Starting Ollama server..."
+    Start-Process -NoNewWindow ollama serve
+    Start-Sleep -Seconds 10  # Wait for Ollama to start
+}
+
+# Check and pull model if needed
+Write-Host "Checking for model qwen3:8b..."
+$modelExists = ollama list 2>$null | Select-String "qwen3:8b"
+if (-not $modelExists) {
+    Write-Host "Pulling model qwen3:8b... This may take some time."
+    ollama pull qwen3:8b
+}
+
 # Start the app
-Write-Host "Starting Streamlit app at http://localhost:8501"
-streamlit run app.py
+Write-Host "Starting Streamlit app at http://localhost:8501/"
+streamlit run app.py --server.address localhost

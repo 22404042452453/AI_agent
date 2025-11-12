@@ -1,5 +1,6 @@
 import os
 import logging
+import concurrent.futures
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
@@ -7,11 +8,11 @@ from langchain_ollama import OllamaLLM
 
 
 def setup_tt_chain(vectorstore):
-    retriever = vectorstore.as_retriever(search_type="mmr", search_kwargs={"k": 10, "lambda_mult": 0.5})
+    retriever = vectorstore.as_retriever(search_type="mmr", search_kwargs={"k": 10, "lambda_mult": 0.6})
     def format_docs(docs):
         return "\n\n".join(doc.page_content for doc in docs)
-    llm = OllamaLLM(model="qwen3:8b", temperature=0.2)
-    template = """Ты инженер-технолог, специализирующийся на создании технических требований (ТТ) на основе нормативных документов.
+    llm = OllamaLLM(model="qwen3:8b", temperature=0)
+    template = """Ты инженер, специализирующийся на создании технических требований (ТТ) на основе нормативных документов.
 
 На основе следующего контекста из нормативных документов создай технические требования для запроса инженера.
 
@@ -24,7 +25,8 @@ def setup_tt_chain(vectorstore):
 6. Упаковка и маркировка
 7. Ссылки на нормы
 
-ВАЖНЫЕ ПРАВИЛА:
+КРИТИЧЕСКИ ВАЖНЫЕ ПРАВИЛА:
+- ОТВЕЧАЙ ТОЛЬКО НА РУССКОМ ЯЗЫКЕ - ЗАПРЕЩЕНЫ ответы на английском или других языках
 - Используй точные термины из контекста нормативных документов
 - Ссылайся на конкретные пункты и разделы документов
 - Если информации недостаточно, укажи это и используй общепринятые стандарты
@@ -36,7 +38,7 @@ def setup_tt_chain(vectorstore):
 
 Запрос: {question}
 
-Сгенерируй технические требования на русском языке:"""
+Сгенерируй технические требования ТОЛЬКО НА РУССКОМ ЯЗЫКЕ:"""
     prompt = PromptTemplate(template=template, input_variables=["context", "question"])
     tt_chain = (
         {"context": retriever | format_docs, "question": RunnablePassthrough()}
